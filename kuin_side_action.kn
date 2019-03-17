@@ -1,0 +1,337 @@
+; kuin_side_action.kn, (C)Kayrlas (https://github.com/kayrlas)
+
+const WinWidth: int :: 1600
+const WinHeight: int :: 900
+const chipWidth: float :: 64.0
+const chipHeight: float :: 64.0
+const chipNumCol: int :: 26 {WinWidth/chipWidth + 1}
+const chipNumRow: int :: 15 {WinHeight/chipHeight + 1}
+
+func main()
+	var wndMain: wnd@Wnd :: wnd@makeWnd(null, %aspect, @WinWidth, @WinHeight, "kuin_side_action (Kayrlas)")
+	var drawMain: wnd@Draw :: wnd@makeDraw(wndMain, 0, 0, @WinWidth, @WinHeight, %scale, %scale, false)
+	
+	while(wnd@act())
+		; do @title()
+		do @game()
+		; do @ending()
+	end while
+end func
+
+func game()
+	{player}
+	class Player(game@Rect)
+		+var toRight: bool
+		*func ctor()
+			do me.x :: 96.0
+			do me.y :: 800.0
+			do me.width :: 46.0
+			do me.height :: 116.0
+			do me.toRight :: true
+		end func
+	end class
+	var player: Player :: #Player
+	{enemy}
+	class Enemy(game@Rect)
+		*func ctor()
+			do me.veloX :: -2.0
+			do me.width :: 150.0
+			do me.height :: 90.0
+		end func
+	end class
+	var enemy0: Enemy :: #Enemy
+	var enemy1: Enemy :: #Enemy
+	var enemy2: Enemy :: #Enemy
+	var enemy3: Enemy :: #Enemy
+	var enemy4: Enemy :: #Enemy
+	var enemy5: Enemy :: #Enemy
+	do enemy0.x :: 1000.0
+	do enemy0.y :: @WinHeight $ float - @chipHeight / 2.0 - enemy0.height * 0.6
+	do enemy1.x :: 1500.0
+	do enemy1.y :: @WinHeight $ float - @chipHeight / 2.0 - enemy1.height * 0.6
+	do enemy2.x :: 1000.0
+	do enemy2.y :: @WinHeight $ float - @chipHeight / 2.0 - enemy2.height * 0.6
+	do enemy3.x :: 1500.0
+	do enemy3.y :: @WinHeight $ float - @chipHeight / 2.0 - enemy3.height * 0.6
+	do enemy4.x :: 1000.0
+	do enemy4.y :: @WinHeight $ float - @chipHeight * 6.0
+	do enemy5.x :: 1000.0
+	do enemy5.y :: @WinHeight $ float - @chipHeight * 7.0 - enemy5.height / 2.0
+	{res}
+	var texBack: draw@Tex :: draw@makeTex("res/dot_back_side.png") {background texture}
+	var texPlayer: draw@Tex :: draw@makeTex("res/dot_kuina_chan.png") {player texture}
+	var texEnemy: draw@Tex :: draw@makeTex("res/game.png") {enemy texture}
+	var texMap: draw@Tex :: draw@makeTex("res/dot_map_chips_side.png") {map texture}
+	{other}
+	do draw@sampler(%point)
+	var pattern: []float :: [0.0, 64.0, 0.0, 128.0]
+	var map: game@Map
+	var map_num: int :: 0
+	var fontProportional: draw@Font :: draw@makeFont(null, 32, false, false, true, 0.0)
+	
+	{start time}
+	var before: int :: lib@sysTime()
+	
+	while loop(wnd@act())
+		{background}
+		do texBack.drawScale(0.0, 0.0, @WinWidth $ float, @WinHeight $ float,
+		|0.0, 0.0, 800.0, 450.0, draw@white)
+		
+		{player operation}
+		if(input@pad(0, %left) >= 1)
+			do player.veloX :- 0.8
+			do player.toRight :: false
+		end if
+		if(input@pad(0, %right) >= 1)
+			do player.veloX :+ 0.8
+			do player.toRight :: true
+		end if
+		{jump}
+		if(input@pad(0, %a) >= 1 & input@pad(0, %a) <= 6 & player.hitBottom())
+			do player.veloY :: -14.0
+		end if
+		{limitation}
+		do player.veloY :+ 0.4 {gravity}
+		do player.veloX :: player.veloX.clamp(-8.0, 8.0)
+		do player.veloY :: player.veloY.clamp(-14.0, 14.0)
+		
+		
+		{ DEBUG
+		; print player coodinate
+		do fontProportional.draw(50.0, 20.0, "X: ", draw@white)
+		do fontProportional.draw(100.0, 20.0, player.x.toStr(), draw@white)
+		do fontProportional.draw(50.0, 60.0, "Y: ", draw@white)
+		do fontProportional.draw(100.0, 60.0, player.y.toStr(), draw@white)
+		/DEBUG }
+		
+		do fontProportional.draw(1300.0, 20.0, "Score: ", draw@black)
+		; do fontProportional.draw()
+		var after: int :: lib@sysTime()
+		do fontProportional.draw(1300.0, 60.0, "Time: ", draw@black)
+		var time: int :: 400 - ((after - before) / 1000)
+		do fontProportional.draw(1500.0, 60.0, time.toStr(), draw@black)
+		{time over}
+		if(time = 0)
+			break loop
+		end if
+		
+		{switching map}
+		if((player.x > @chipWidth * (@chipNumCol - 1) $ float - @chipWidth / 2.0) & (map_num <> 3))
+			do map_num :+ 1
+			do player.x :: @chipWidth / 2.0
+		elif((player.x < @chipWidth / 2.0) & (map_num <> 0))
+			do map_num :- 1
+			do player.x :: @chipWidth * (@chipNumCol - 1) $ float - @chipWidth / 2.0
+		end if
+		
+		{ DEBUG }
+		if(input@key(%_0))
+			do map_num :: 0
+			do player.x :: 96.0
+			do player.y :: 800.0
+		elif(input@key(%_1))
+			do map_num :: 1
+			do player.x :: 96.0
+			do player.y :: 800.0
+		elif(input@key(%_2))
+			do map_num :: 2
+			do player.x :: 96.0
+			do player.y :: 800.0
+		elif(input@key(%_3))
+			do map_num :: 3
+			do player.x :: 96.0
+			do player.y :: 800.0
+		end if
+		{ /DEBUG }
+		
+		{loading map}
+		switch(map_num)
+		case 0
+			do map :: game@makeMap("res/map_00.txt", @chipWidth, @chipHeight)
+			{enemy stays in the map}
+			if(enemy0.x + 50.0 > @WinWidth $ float | enemy0.hitRight())
+				do enemy0.veloX :: -2.0
+			end if
+			if(enemy0.x - 50.0 < 0.0 | enemy0.hitLeft())
+				do enemy0.veloX :: 2.0
+			end if
+			if(enemy1.x + 50.0 > @WinWidth $ float | enemy1.hitRight())
+				do enemy1.veloX :: -2.0
+			end if
+			if(enemy1.x - 50.0 < 0.0 | enemy1.hitLeft())
+				do enemy1.veloX :: 2.0
+			end if
+			{collision}
+			var collDirect0: game@Direction
+			var collDirect1: game@Direction
+			do player.move(0.0)
+			do enemy0.move(0.0)
+			do enemy1.move(0.0)
+			do game@hitMapRect(map, player, @getChipInfo, null)
+			do game@hitMapRect(map, enemy0, @getChipInfoNoFriction, null)
+			do game@hitMapRect(map, enemy1, @getChipInfoNoFriction, null)
+			do collDirect0 :: game@hitRectRect(player, enemy0, 1.0, 1.0, 1.0, 0.0)
+			do collDirect1 :: game@hitRectRect(player, enemy1, 1.0, 1.0, 1.0, 0.0)
+			do game@hitRectRect(enemy0, enemy1, 1.0, 1.0, 1.0, 0.0)
+			do player.update()
+			do enemy0.update()
+			do enemy1.update()
+			if(collDirect0 = %left | collDirect0 = %right | collDirect1 = %left | collDirect1 = %right)
+				break loop
+			end if
+			{enemy}
+			do texEnemy.drawScale(enemy0.x - enemy0.width / 2.0, enemy0.y - enemy0.height / 2.0, enemy0.width, enemy0.height,
+			|(draw@cnt() / 10 % 3) $ float * 200.0, 220.0, 200.0, 120.0, draw@white)
+			do texEnemy.drawScale(enemy1.x - enemy1.width / 2.0, enemy1.y - enemy1.height / 2.0, enemy1.width, enemy1.height,
+			|(draw@cnt() / 10 % 3) $ float * 200.0, 220.0, 200.0, 120.0, draw@white)
+		case 1
+			do map :: game@makeMap("res/map_01.txt", @chipWidth, @chipHeight)
+			{enemy stays in the map}
+			if(enemy2.x + 50.0 > @WinWidth $ float | enemy2.hitRight())
+				do enemy2.veloX :: -2.0
+			end if
+			if(enemy2.x - 50.0 < 0.0 | enemy2.hitLeft())
+				do enemy2.veloX :: 2.0
+			end if
+			if(enemy3.x + 50.0 > @WinWidth $ float | enemy3.hitRight())
+				do enemy3.veloX :: -2.0
+			end if
+			if(enemy3.x - 50.0 < 0.0 | enemy3.hitLeft())
+				do enemy3.veloX :: 2.0
+			end if
+			{collision}
+			var collDirect2: game@Direction
+			var collDirect3: game@Direction
+			do player.move(0.0)
+			do enemy2.move(0.0)
+			do enemy3.move(0.0)
+			do game@hitMapRect(map, player, @getChipInfo, null)
+			do game@hitMapRect(map, enemy2, @getChipInfoNoFriction, null)
+			do game@hitMapRect(map, enemy3, @getChipInfoNoFriction, null)
+			do collDirect2 :: game@hitRectRect(player, enemy2, 1.0, 1.0, 1.0, 0.0)
+			do collDirect3 :: game@hitRectRect(player, enemy3, 1.0, 1.0, 1.0, 0.0)
+			do game@hitRectRect(enemy2, enemy3, 1.0, 1.0, 1.0, 0.0)
+			do player.update()
+			do enemy2.update()
+			do enemy3.update()
+			if(collDirect2 = %left | collDirect2 = %right | collDirect3 = %left | collDirect3 = %right)
+				break loop
+			end if
+			{enemy}
+			do texEnemy.drawScale(enemy2.x - enemy2.width / 2.0, enemy2.y - enemy2.height / 2.0, enemy2.width, enemy2.height,
+			|(draw@cnt() / 10 % 3) $ float * 200.0, 220.0, 200.0, 120.0, draw@white)
+			do texEnemy.drawScale(enemy3.x - enemy3.width / 2.0, enemy3.y - enemy3.height / 2.0, enemy3.width, enemy3.height,
+			|(draw@cnt() / 10 % 3) $ float * 200.0, 220.0, 200.0, 120.0, draw@white)
+		case 2
+			do map :: game@makeMap("res/map_02.txt", @chipWidth, @chipHeight)
+			{enemy stays in the map}
+			if(enemy4.x + 50.0 > @WinWidth $ float | enemy4.hitRight())
+				do enemy4.veloX :: -2.0
+			end if
+			if(enemy4.x - 50.0 < 0.0 | enemy4.hitLeft())
+				do enemy4.veloX :: 2.0
+			end if
+			{collision}
+			var collDirect4: game@Direction
+			do player.move(0.0)
+			do enemy4.move(0.0)
+			do game@hitMapRect(map, player, @getChipInfo, null)
+			do game@hitMapRect(map, enemy4, @getChipInfoNoFriction, null)
+			do collDirect4 :: game@hitRectRect(player, enemy2, 1.0, 1.0, 1.0, 0.0)
+			do player.update()
+			do enemy4.update()
+			if(collDirect4 = %left | collDirect4 = %right)
+				break loop
+			end if
+			{enemy}
+			do texEnemy.drawScale(enemy4.x - enemy4.width / 2.0, enemy4.y - enemy4.height / 2.0, enemy4.width, enemy4.height,
+			|(draw@cnt() / 10 % 3) $ float * 200.0, 220.0, 200.0, 120.0, draw@white)
+		case 3
+			do map :: game@makeMap("res/map_03.txt", @chipWidth, @chipHeight)
+			{enemy stays in the map}
+			if(enemy5.x + 50.0 > @WinWidth $ float | enemy5.hitRight())
+				do enemy5.veloX :: -2.0
+			end if
+			if(enemy5.x - 50.0 < 0.0 | enemy5.hitLeft())
+				do enemy5.veloX :: 2.0
+			end if
+			{collision}
+			var collDirect5: game@Direction
+			do player.move(0.0)
+			do enemy5.move(0.0)
+			do game@hitMapRect(map, player, @getChipInfo, null)
+			do game@hitMapRect(map, enemy5, @getChipInfoNoFriction, null)
+			do collDirect5 :: game@hitRectRect(player, enemy5, 1.0, 1.0, 1.0, 0.0)
+			do player.update()
+			do enemy5.update()
+			if(collDirect5 = %left | collDirect5 = %right)
+				break loop
+			end if
+			{enemy}
+			do texEnemy.drawScale(enemy5.x - enemy5.width / 2.0, enemy5.y - enemy5.height / 2.0, enemy5.width, enemy5.height,
+			|(draw@cnt() / 10 % 3) $ float * 200.0, 220.0, 200.0, 120.0, draw@white)
+		end switch
+		{ DEBUG
+		do fontProportional.draw(50.0, 100.0, "Map: ", draw@white)
+		do fontProportional.draw(150.0, 100.0, map_num.toStr(), draw@white)
+		/DEBUG }
+		
+		{player}
+		do texPlayer.drawScale(player.x - 64.0, player.y - 64.0, 128.0, 128.0,
+		|pattern[draw@cnt() / 12 % 4], player.toRight ?(128.0, 0.0), 64.0, 64.0, draw@white)
+		
+		{drawing map}
+		for y(0, @chipNumRow - 1)
+			for x(0, @chipNumCol - 1)
+				var chip: int :: map.get(x, y)
+				if(chip >= 0)
+					do texMap.drawScale(x $ float * @chipWidth - @chipWidth / 2.0, y $ float * @chipHeight - @chipHeight / 2.0, @chipWidth, @chipHeight, chip $ float * 32.0, 0.0, 32.0, 32.0, draw@white)
+				end if
+			end for
+		end for
+		
+		do draw@render(60)
+		
+	end while
+end func
+
+func getChipInfo(chip: int, info: game@ChipInfo)
+	switch(chip)
+	case lib@intMin to - 1
+		do info.shape :: %none
+	case 0, 1
+		do info.shape :: %rect
+		do info.solidFriction :: 0.2
+	case 2
+		do info.shape :: %triLeftTop
+		do info.solidFriction :: 0.1
+	case 3
+		do info.shape :: %triRightTop
+		do info.solidFriction :: 0.1
+	case 6
+		do info.shape :: %rect
+		do info.solidFriction :: 0.0
+	case 7
+		do info.shape :: %rect
+		do info.solidFriction :: 0.2
+		do info.repulsion :: 0.95
+	end switch
+	do info.fluidFriction :: 0.98
+end func
+
+func getChipInfoNoFriction(chip: int, info: game@ChipInfo)
+	switch(chip)
+	case lib@intMin to - 1
+		do info.shape :: %none
+	case 0, 1
+		do info.shape :: %rect
+	case 2
+		do info.shape :: %triLeftTop
+	case 3
+		do info.shape :: %triRightTop
+	case 6
+		do info.shape :: %rect
+	case 7
+		do info.shape :: %rect
+	end switch
+end func
